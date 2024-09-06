@@ -4,3 +4,9 @@ numpy==1.23.5
 pandas==1.5.3
 plotly==5.13.1
 scikit-learn==1.1.3
+streamlit
+yfinance
+numpy
+pandas
+scipy
+plotly
