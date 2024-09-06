@@ -1,8 +1,6 @@
-setuptools==68.0.0
-wheel==0.41.2
-streamlit==1.18.1
-yfinance==0.2.26
-numpy==1.23.5
+streamlit
+yfinance
+numpy
 pandas
 scipy
 plotly
