@@ -7,22 +7,18 @@ from scipy.optimize import curve_fit
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
-
 # Function to fetch data from Yahoo Finance
 def fetch_data(ticker, start_date, end_date):
     data = yf.download(ticker, start=start_date, end=end_date)
     return data
-
 # Function to perform linear regression on log-log data
 def perform_log_log_regression(data, genesis_date):
     data = data.copy()  # Create a copy to avoid SettingWithCopyWarning
     data['Days Since Genesis'] = (data.index - genesis_date).days
     x = np.log(data['Days Since Genesis'].values)
     y = np.log(data.iloc[:, 0].values)  # Use the first (and only) column, whatever it's named
-
     if len(x) == 0 or len(y) == 0:
         raise ValueError("Inputs must not be empty.")
-
     # Perform linear regression
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
     
@@ -38,7 +34,6 @@ def perform_log_log_regression(data, genesis_date):
     
     # Calculate t-statistic for slope
     t_stat = slope / std_err
-
     # Print regression statistics
     print("\nRegression Statistics:")
     print(f"Intercept: {intercept:.4f}")
@@ -48,9 +43,7 @@ def perform_log_log_regression(data, genesis_date):
     print(f"Standard Error: {std_error:.4f}")
     print(f"t-statistic (slope): {t_stat:.4f}")
     print(f"p-value (slope): {p_value:.4e}")
-
     return intercept, slope
-
 # Function to calculate the standard deviation of residuals
 def calculate_std_dev(data, intercept, slope, genesis_date):
     data = data.copy()  # Create a copy to avoid SettingWithCopyWarning
@@ -60,7 +53,6 @@ def calculate_std_dev(data, intercept, slope, genesis_date):
     residuals = y - (intercept + slope * x)
     std_dev = np.std(residuals)
     return std_dev
-
 # New Plotly version of plot_power_law_with_percentile_lines
 def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev, genesis_date):
     data = data.copy()  # Create a copy to avoid SettingWithCopyWarning
@@ -69,32 +61,23 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
     days = data['Days Since Genesis'].values
     years = data['Year'].values
     prices = data.iloc[:, 0].values  # Use the first (and only) column, whatever it's named
-
     # Generate future dates up to 2035
     future_dates = pd.date_range(start=data.index[-1], end='2035-12-31')
     future_days = (future_dates - genesis_date).days
     future_years = future_days / 365.25
-
     # Combine current and future data
     all_days = np.concatenate([days, future_days])
     all_years = np.concatenate([years, future_years])
-
     # Calculate the power law (regression line)
     power_law_line = np.exp(intercept + slope * np.log(days))
-
     # Calculate the 90th and 10th percentile lines
     line_90th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.90) * std_dev)
     line_10th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.10) * std_dev)
-
     # Calculate percent deviation
     percent_deviation = (prices - power_law_line) / power_law_line * 100
-
-
     # Calculate percentile ranks of percent deviations
     percentiles = pd.qcut(percent_deviation, 100, labels=False)
-
     fig = go.Figure()
-
     # Add scatter plot
     fig.add_trace(go.Scatter(
         x=years,
@@ -103,7 +86,6 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         marker=dict(color=percentiles, colorscale='Turbo', showscale=True, colorbar=dict(title='Percentile')),
         name='BTC Price'
     ))
-
     # Add power law line
     fig.add_trace(go.Scatter(
         x=all_years,
@@ -112,7 +94,6 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         name='Power Law',
         line=dict(color='white', dash='dash')
     ))
-
     # Add 90th and 10th percentile lines
     fig.add_trace(go.Scatter(
         x=all_years,
@@ -128,7 +109,6 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         name='10th Percentile',
         line=dict(color='green', dash='dash')
     ))
-
     fig.update_layout(
         title='BTC Price vs. Year on Log-Log Scale with Percentile Lines',
         xaxis_title='Year',
@@ -138,19 +118,15 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         legend_title="Legend",
         template="plotly_dark"
     )
-
     fig.update_xaxes(
         tickmode='array',
         tickvals=np.arange(0, 27, 1),
         ticktext=[f'{int(year + genesis_date.year)}' for year in np.arange(0, 27, 1)]
     )
-
     return fig
-
 # New function to calculate 1-year moving average
 def calculate_1yr_ma(data):
     return data.iloc[:, 0].rolling(window=365).mean()
-
 # New Plotly version of plot_power_law_ma
 def plot_power_law_ma_plotly(data, intercept, slope, std_dev, genesis_date):
     data['Days Since Genesis'] = (data.index - genesis_date).days
@@ -158,31 +134,23 @@ def plot_power_law_ma_plotly(data, intercept, slope, std_dev, genesis_date):
     days = data['Days Since Genesis'].values
     years = data['Year'].values
     ma_prices = data['MA'].values  # Use the MA column
-
     # Generate future dates up to 2035
     future_dates = pd.date_range(start=data.index[-1], end='2035-12-31')
     future_days = (future_dates - genesis_date).days
     future_years = future_days / 365.25
-
     # Combine current and future data
     all_days = np.concatenate([days, future_days])
     all_years = np.concatenate([years, future_years])
-
     # Calculate the power law (regression line)
     power_law_line = np.exp(intercept + slope * np.log(days))
-
     # Calculate the 90th and 10th percentile lines
     line_90th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.90) * std_dev)
     line_10th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.10) * std_dev)
-
     # Calculate percent deviation
     percent_deviation = (ma_prices - power_law_line) / power_law_line * 100
-
     # Calculate percentile ranks of percent deviations
     percentiles = pd.qcut(percent_deviation, 100, labels=False)
-
     fig = go.Figure()
-
     # Add scatter plot
     fig.add_trace(go.Scatter(
         x=years,
@@ -191,7 +159,6 @@ def plot_power_law_ma_plotly(data, intercept, slope, std_dev, genesis_date):
         marker=dict(color=percentiles, colorscale='Turbo', showscale=True, colorbar=dict(title='Percentile')),
         name='BTC 1-Year MA'
     ))
-
     # Add power law line
     fig.add_trace(go.Scatter(
         x=all_years,
@@ -200,7 +167,6 @@ def plot_power_law_ma_plotly(data, intercept, slope, std_dev, genesis_date):
         name='Power Law',
         line=dict(color='white', dash='dash')
     ))
-
     # Add 90th and 10th percentile lines
     fig.add_trace(go.Scatter(
         x=all_years,
@@ -216,7 +182,6 @@ def plot_power_law_ma_plotly(data, intercept, slope, std_dev, genesis_date):
         name='10th Percentile',
         line=dict(color='green', dash='dash')
     ))
-
     fig.update_layout(
         title='BTC 1-Year MA vs. Year on Log-Log Scale with Percentile Lines',
         xaxis_title='Year',
@@ -226,19 +191,15 @@ def plot_power_law_ma_plotly(data, intercept, slope, std_dev, genesis_date):
         legend_title="Legend",
         template="plotly_dark"
     )
-
     fig.update_xaxes(
         tickmode='array',
         tickvals=np.arange(0, 27, 1),
         ticktext=[f'{int(year + genesis_date.year)}' for year in np.arange(0, 27, 1)]
     )
-
     return fig
-
 # Sinusoidal function for fitting
 def sinusoidal_function(x, a, b, c, d):
     return a * np.sin(b * x + c) + d
-
 # New Plotly version of plot_log_normalized_residuals_with_sinusoidal_fit
 def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date):
     log_normalized_residuals = np.log(data['1yr MA Residuals'].dropna())
@@ -266,10 +227,8 @@ def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date)
     median = np.median(log_normalized_residuals)
     percentile_95 = np.percentile(log_normalized_residuals, 95)
     percentile_5 = np.percentile(log_normalized_residuals, 5)
-
     # Calculate percentage change of the log of the 1yr MA of normalized residuals
     pct_change_log_residuals = log_normalized_residuals.pct_change().dropna()
-
     # Calculate 30-day moving average of the percentage change
     ma_30day_pct_change = pct_change_log_residuals.rolling(window=360).mean().dropna()
     ma_days_since_genesis = data.loc[ma_30day_pct_change.index, 'Days Since Genesis'].values
@@ -278,7 +237,6 @@ def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date)
     amplitude_ma = (np.percentile(ma_30day_pct_change, 95) - np.percentile(ma_30day_pct_change, 5))
     vertical_shift_ma = np.median(ma_30day_pct_change)
     initial_guess_ma = [amplitude_ma, frequency, 0, vertical_shift_ma]
-
     # Fit sinusoidal regression for 30-day MA of percentage change
     popt_ma, _ = curve_fit(sinusoidal_function, ma_days_since_genesis, ma_30day_pct_change, p0=initial_guess_ma)
     sinusoidal_fit_ma = sinusoidal_function(ma_days_since_genesis, *popt_ma)
@@ -289,10 +247,8 @@ def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date)
     # Print the sinusoidal function formula for 30-day MA
     a_ma, b_ma, c_ma, d_ma = popt_ma
     print(f"Sinusoidal Function (30-Day MA Pct Change): y = {a_ma:.4f} * sin({b_ma:.6f} * x + {c_ma:.4f}) + {d_ma:.4f}")
-
     # Create subplots
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1)
-
     # Add traces for log normalized residuals
     fig.add_trace(go.Scatter(x=log_normalized_residuals.index, y=log_normalized_residuals, 
                              mode='lines', name='Log of 1yr MA Normalized Residuals', line=dict(color='cyan')), row=1, col=1)
@@ -304,7 +260,6 @@ def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date)
                              mode='lines', name='95th Percentile', line=dict(color='red', dash='dash')), row=1, col=1)
     fig.add_trace(go.Scatter(x=[log_normalized_residuals.index[0], log_normalized_residuals.index[-1]], y=[percentile_5, percentile_5], 
                              mode='lines', name='5th Percentile', line=dict(color='green', dash='dash')), row=1, col=1)
-
     # Add traces for 30-day MA of percentage change
     fig.add_trace(go.Scatter(x=ma_30day_pct_change.index, y=ma_30day_pct_change, 
                              mode='lines', name='30-Day MA of Pct Change', line=dict(color='orange')), row=2, col=1)
@@ -312,7 +267,6 @@ def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date)
                              mode='lines', name=f'Sinusoidal Fit (R^2 = {r_squared_ma:.4f})', line=dict(color='magenta', dash='dash')), row=2, col=1)
     fig.add_trace(go.Scatter(x=[ma_30day_pct_change.index[0], ma_30day_pct_change.index[-1]], y=[0, 0], 
                              mode='lines', name='Zero Line', line=dict(color='white', dash='dash')), row=2, col=1)
-
     fig.update_layout(
         title='Log of 1yr MA Normalized Residuals and 30-Day MA of Pct Change with Sinusoidal Fits',
         xaxis_title='Date',
@@ -321,15 +275,12 @@ def plot_log_normalized_residuals_with_sinusoidal_fit_plotly(data, genesis_date)
         legend_title="Legend",
         template="plotly_dark"
     )
-
     fig.update_xaxes(
         tickmode='array',
         tickvals=np.arange(0, 27, 1),
         ticktext=[f'{int(year + genesis_date.year)}' for year in np.arange(0, 27, 1)]
     )
-
     return fig
-
 # Function to calculate and normalize residuals
 def calculate_and_normalize_residuals(data, intercept, slope, genesis_date):
     data['Days Since Genesis'] = (data.index - genesis_date).days
@@ -345,16 +296,13 @@ def calculate_and_normalize_residuals(data, intercept, slope, genesis_date):
     data['1yr MA Residuals'] = data['Normalized Residuals'].rolling(window=360).mean()
     
     return data
-
 # Main function
 if __name__ == "__main__":
     btc_ticker = 'BTC-USD'
     start_date = '2022-06-01'
     end_date = datetime.now().strftime('%Y-%m-%d')
-
     # Fetch recent data from Yahoo Finance
     btc_recent_data = fetch_data(btc_ticker, start_date, end_date)
-
     # Load historical data from the provided CSV file
     btc_historical_data = pd.read_csv('btc_data_reversed.csv', index_col='Date', parse_dates=True)
     
@@ -377,30 +325,22 @@ if __name__ == "__main__":
     # Plot the power law on a log-log scale with 90th and 10th percentile lines
     fig_power_law = plot_power_law_with_percentile_lines_plotly(btc_data, intercept, slope, std_dev, genesis_date)
     fig_power_law.show()
-
     # Calculate 1-year moving average
     btc_data['MA'] = calculate_1yr_ma(btc_data)
-
     # Remove the first year of data (NaN values in MA)
     btc_data_ma = btc_data.dropna()
-
     # Adjust the genesis date for MA data
     genesis_date_ma = genesis_date + timedelta(days=365)
-
     # Perform regression on MA data
     print("\nMoving Average Power Law Regression Statistics:")
     intercept_ma, slope_ma = perform_log_log_regression(btc_data_ma['MA'].to_frame(), genesis_date_ma)
-
     # Calculate the standard deviation of residuals for MA data
     std_dev_ma = calculate_std_dev(btc_data_ma['MA'].to_frame(), intercept_ma, slope_ma, genesis_date_ma)
-
     # Plot the power law on a log-log scale with 90th and 10th percentile lines for MA data
     fig_power_law_ma = plot_power_law_ma_plotly(btc_data_ma, intercept_ma, slope_ma, std_dev_ma, genesis_date_ma)
     fig_power_law_ma.show()
-
     # Calculate and normalize residuals
     btc_data = calculate_and_normalize_residuals(btc_data, intercept, slope, genesis_date)
-
     # Plot log of 1yr MA normalized residuals with sinusoidal fit and percentage change
     fig_residuals = plot_log_normalized_residuals_with_sinusoidal_fit_plotly(btc_data, genesis_date)
     fig_residuals.show()
