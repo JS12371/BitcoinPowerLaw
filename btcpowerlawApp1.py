@@ -24,22 +24,33 @@ st.title("Bitcoin Power Law Analysis")
 
 # Fetch and prepare data
 @st.cache_data
+@st.cache_data
 def load_data():
     btc_ticker = 'BTC-USD'
     end_date = datetime.now().strftime('%Y-%m-%d')
-    
+
     # Load all available historical data
     btc_historical_data = pd.read_csv('btc_data_reversed.csv', index_col='Date', parse_dates=True)
     btc_historical_data = btc_historical_data[['Close']]
-    
+
+    # Ensure the historical data is tz-naive
+    btc_historical_data.index = btc_historical_data.index.tz_localize(None)
+
     # Fetch recent data (last 6 months) to ensure up-to-date information
     start_date = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%d')
     btc_recent_data = fetch_data(btc_ticker, start_date, end_date)
-    
+
+    # Ensure the recent data is tz-naive as well
+    btc_recent_data.index = btc_recent_data.index.tz_localize(None)
+
+    # Concatenate the historical and recent data
     btc_data = pd.concat([btc_historical_data, btc_recent_data[['Close']][~btc_recent_data.index.isin(btc_historical_data.index)]])
-    btc_data = btc_data.sort_index()
     
+    # Sort by the index
+    btc_data = btc_data.sort_index()
+
     return btc_data
+
 
 btc_data = load_data()
 genesis_date = datetime(2009, 1, 3)
