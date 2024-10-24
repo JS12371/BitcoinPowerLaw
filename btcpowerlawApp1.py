@@ -72,13 +72,38 @@ btc_data['MA_30D_Pct_Change_Sin'] = ma_30d_pct_change
 intercept, slope = perform_log_log_regression(btc_data, genesis_date)
 std_dev = calculate_std_dev(btc_data, intercept, slope, genesis_date)
 
+# Calculate 1-year moving average
 btc_data['MA'] = calculate_1yr_ma(btc_data)
-btc_data_ma = btc_data.dropna()
-genesis_date_ma = genesis_date + timedelta(days=365)
-intercept_ma, slope_ma = perform_log_log_regression(btc_data_ma['MA'].to_frame(), genesis_date_ma)
-std_dev_ma = calculate_std_dev(btc_data_ma['MA'].to_frame(), intercept_ma, slope_ma, genesis_date_ma)
 
+# Check for NaNs after moving average calculation
+st.write(f"Number of NaNs in MA column: {btc_data['MA'].isna().sum()}")
+
+# Handle NaNs by forward filling them (you can also try interpolation if you prefer)
+btc_data_ma = btc_data.fillna(method='ffill')
+
+# Ensure the DataFrame is not empty after handling NaNs
+if btc_data_ma['MA'].dropna().empty:
+    st.error("Insufficient data for regression. Please check the input data.")
+else:
+    # Perform log-log regression on the moving average data
+    genesis_date_ma = genesis_date + timedelta(days=365)
+    intercept_ma, slope_ma = perform_log_log_regression(btc_data_ma['MA'].to_frame(), genesis_date_ma)
+    
+    # Calculate standard deviation for the moving average regression
+    std_dev_ma = calculate_std_dev(btc_data_ma['MA'].to_frame(), intercept_ma, slope_ma, genesis_date_ma)
+
+# Calculate and normalize residuals based on the original data
 btc_data = calculate_and_normalize_residuals(btc_data, intercept, slope, genesis_date)
+
+# Add sinusoidal functions
+days_since_genesis = (btc_data.index - genesis_date).days
+log_norm_residuals = 0.4224 * np.sin(0.004752 * days_since_genesis - 2.2360) + 3.5741
+ma_30d_pct_change = 0.0005 * np.sin(0.004737 * days_since_genesis - 1.4617) - 0.0000
+
+# Add these to the btc_data DataFrame
+btc_data['Log_Norm_Residuals_Sin'] = log_norm_residuals
+btc_data['MA_30D_Pct_Change_Sin'] = ma_30d_pct_change
+
 
 # Create Streamlit app
 st.sidebar.header("Select Plot")
