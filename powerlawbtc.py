@@ -64,34 +64,40 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
     days = data['Days Since Genesis'].values
     years = data['Year'].values
     prices = data.iloc[:, 0].values  # Use the first (and only) column, whatever it's named
-    
+
     # Generate future dates up to 2035
     future_dates = pd.date_range(start=data.index[-1], end='2035-12-31')
     future_days = (future_dates - genesis_date).days
     future_years = future_days / 365.25
-    
+
     # Combine current and future data
     all_days = np.concatenate([days, future_days])
     all_years = np.concatenate([years, future_years])
-    
+
     # Calculate the power law (regression line)
     power_law_line = np.exp(intercept + slope * np.log(days))
-    
-    # Check and remove NaN values in prices and power_law_line
+
+    # Check for and remove NaN values in prices and power_law_line
     valid_indices = ~np.isnan(prices) & ~np.isnan(power_law_line)
     prices = prices[valid_indices]
     power_law_line = power_law_line[valid_indices]
-    
+    years = years[valid_indices]
+
+    # If there's not enough valid data left, raise an error or skip plotting
+    if len(prices) == 0 or len(power_law_line) == 0:
+        raise ValueError("Insufficient valid data to perform power law plot.")
+
     # Recalculate percent deviation after removing NaN values
     percent_deviation = (prices - power_law_line) / power_law_line * 100
 
-    # Handle case where all percent deviations are NaN
+    # Handle case where all percent deviations are NaN or there are not enough data points
     if len(percent_deviation) == 0 or np.all(np.isnan(percent_deviation)):
         raise ValueError("Percent deviation cannot be calculated due to NaN values in input data.")
 
     # Calculate percentile ranks of percent deviations
     percentiles = pd.qcut(percent_deviation, 100, labels=False)
 
+    # Create the figure
     fig = go.Figure()
 
     # Add scatter plot
@@ -147,6 +153,7 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         ticktext=[f'{int(year + genesis_date.year)}' for year in np.arange(0, 27, 1)]
     )
     return fig
+
 
 # New function to calculate 1-year moving average
 def calculate_1yr_ma(data):
