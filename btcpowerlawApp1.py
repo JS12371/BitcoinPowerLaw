@@ -64,7 +64,7 @@ btc_data['MA_30D_Pct_Change_Sin'] = ma_30d_pct_change
 intercept, slope = perform_log_log_regression(btc_data, genesis_date)
 std_dev = calculate_std_dev(btc_data, intercept, slope, genesis_date)
 btc_data['MA'] = calculate_1yr_ma(btc_data)
-btc_data_ma = btc_data.dropna()
+btc_data_ma = btc_data.dropna(subset = ['MA'])
 genesis_date_ma = genesis_date + timedelta(days=365)
 intercept_ma, slope_ma = perform_log_log_regression(btc_data_ma['MA'].to_frame(), genesis_date_ma)
 std_dev_ma = calculate_std_dev(btc_data_ma['MA'].to_frame(), intercept_ma, slope_ma, genesis_date_ma)
