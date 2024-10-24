@@ -88,6 +88,8 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
 
     # Calculate percent deviation
     percent_deviation = (prices - power_law_line) / power_law_line * 100
+    percent_deviation = percent_deviation.fillna(0)
+
 
     # Calculate percentile ranks of percent deviations
     percentiles = pd.qcut(percent_deviation, 100, labels=False)
