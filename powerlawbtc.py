@@ -7,10 +7,14 @@ from scipy.optimize import curve_fit
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
+
 # Function to fetch data from Yahoo Finance
 def fetch_data(ticker, start_date, end_date):
     data = yf.download(ticker, start=start_date, end=end_date)
+    # Ensure the index (date) is timezone-naive
+    data.index = data.index.tz_localize(None)
     return data
+    
 # Function to perform linear regression on log-log data
 def perform_log_log_regression(data, genesis_date):
     data = data.copy()  # Create a copy to avoid SettingWithCopyWarning
