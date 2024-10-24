@@ -57,7 +57,6 @@ def calculate_std_dev(data, intercept, slope, genesis_date):
     residuals = y - (intercept + slope * x)
     std_dev = np.std(residuals)
     return std_dev
-# New Plotly version of plot_power_law_with_percentile_lines
 def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev, genesis_date):
     data = data.copy()  # Create a copy to avoid SettingWithCopyWarning
     data['Days Since Genesis'] = (data.index - genesis_date).days
@@ -65,23 +64,36 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
     days = data['Days Since Genesis'].values
     years = data['Year'].values
     prices = data.iloc[:, 0].values  # Use the first (and only) column, whatever it's named
+    
     # Generate future dates up to 2035
     future_dates = pd.date_range(start=data.index[-1], end='2035-12-31')
     future_days = (future_dates - genesis_date).days
     future_years = future_days / 365.25
+    
     # Combine current and future data
     all_days = np.concatenate([days, future_days])
     all_years = np.concatenate([years, future_years])
+    
     # Calculate the power law (regression line)
     power_law_line = np.exp(intercept + slope * np.log(days))
-    # Calculate the 90th and 10th percentile lines
-    line_90th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.90) * std_dev)
-    line_10th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.10) * std_dev)
-    # Calculate percent deviation
+    
+    # Check and remove NaN values in prices and power_law_line
+    valid_indices = ~np.isnan(prices) & ~np.isnan(power_law_line)
+    prices = prices[valid_indices]
+    power_law_line = power_law_line[valid_indices]
+    
+    # Recalculate percent deviation after removing NaN values
     percent_deviation = (prices - power_law_line) / power_law_line * 100
+
+    # Handle case where all percent deviations are NaN
+    if len(percent_deviation) == 0 or np.all(np.isnan(percent_deviation)):
+        raise ValueError("Percent deviation cannot be calculated due to NaN values in input data.")
+
     # Calculate percentile ranks of percent deviations
     percentiles = pd.qcut(percent_deviation, 100, labels=False)
+
     fig = go.Figure()
+
     # Add scatter plot
     fig.add_trace(go.Scatter(
         x=years,
@@ -90,6 +102,7 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         marker=dict(color=percentiles, colorscale='Turbo', showscale=True, colorbar=dict(title='Percentile')),
         name='BTC Price'
     ))
+
     # Add power law line
     fig.add_trace(go.Scatter(
         x=all_years,
@@ -98,6 +111,11 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         name='Power Law',
         line=dict(color='white', dash='dash')
     ))
+
+    # Calculate the 90th and 10th percentile lines
+    line_90th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.90) * std_dev)
+    line_10th_percentile = np.exp(intercept + slope * np.log(all_days) + norm.ppf(0.10) * std_dev)
+
     # Add 90th and 10th percentile lines
     fig.add_trace(go.Scatter(
         x=all_years,
@@ -113,6 +131,7 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         name='10th Percentile',
         line=dict(color='green', dash='dash')
     ))
+
     fig.update_layout(
         title='BTC Price vs. Year on Log-Log Scale with Percentile Lines',
         xaxis_title='Year',
@@ -128,6 +147,7 @@ def plot_power_law_with_percentile_lines_plotly(data, intercept, slope, std_dev,
         ticktext=[f'{int(year + genesis_date.year)}' for year in np.arange(0, 27, 1)]
     )
     return fig
+
 # New function to calculate 1-year moving average
 def calculate_1yr_ma(data):
     return data.iloc[:, 0].rolling(window=365).mean()
